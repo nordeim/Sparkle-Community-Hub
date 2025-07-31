@@ -1,0 +1,57 @@
+// src/config/constants.ts
+
+export const PAGINATION = {
+  DEFAULT_LIMIT: 20,
+  MAX_LIMIT: 100,
+  COMMENTS_LIMIT: 20,
+  NOTIFICATIONS_LIMIT: 50,
+  SEARCH_LIMIT: 20,
+} as const
+
+export const CACHE_TIMES = {
+  USER_PROFILE: 300, // 5 minutes
+  POST_DETAILS: 300, // 5 minutes
+  YOUTUBE_VIDEO: 3600, // 1 hour
+  YOUTUBE_CHANNEL: 86400, // 24 hours
+  TRENDING_POSTS: 600, // 10 minutes
+  SEARCH_SUGGESTIONS: 3600, // 1 hour
+} as const
+
+export const REAL_TIME = {
+  TYPING_TIMEOUT: 5000, // 5 seconds
+  PRESENCE_TIMEOUT: 300000, // 5 minutes
+  RECONNECT_DELAY: 1000, // 1 second
+  MAX_RECONNECT_ATTEMPTS: 5,
+} as const
+
+export const LIMITS = {
+  POST_TITLE_MIN: 3,
+  POST_TITLE_MAX: 200,
+  POST_CONTENT_MIN: 10,
+  POST_CONTENT_MAX: 100000,
+  COMMENT_MIN: 1,
+  COMMENT_MAX: 1000,
+  BIO_MAX: 500,
+  USERNAME_MIN: 3,
+  USERNAME_MAX: 30,
+  TAG_MAX: 30,
+  MAX_TAGS_PER_POST: 5,
+} as const
+
+export const YOUTUBE = {
+  VIDEO_ID_REGEX: /^[a-zA-Z0-9_-]{11}$/,
+  API_QUOTA_LIMIT: 10000,
+  CACHE_DURATION: {
+    VIDEO: 3600,
+    CHANNEL: 86400,
+    PLAYLIST: 3600,
+  },
+} as const
+
+export const SEARCH = {
+  MIN_QUERY_LENGTH: 2,
+  MAX_QUERY_LENGTH: 100,
+  DEBOUNCE_MS: 300,
+  MAX_SUGGESTIONS: 10,
+  FACET_LIMIT: 100,
+} as const
