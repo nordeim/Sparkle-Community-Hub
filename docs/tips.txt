@@ -1,0 +1,6 @@
+egrep -n '```| src\/' oo1
+
+git commit -m "update docs"
+git status
+git push -u origin main
+
