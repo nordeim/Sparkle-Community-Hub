@@ -20,3 +20,16 @@ npx prisma init
 
 # 5. Configure environment variables
 cp .env.example .env.local
+
+# 1. Install shadcn/ui
+npx shadcn-ui@latest init
+npx shadcn-ui@latest add button card input form toast
+
+# 2. Create base components
+# src/components/ui/[component].tsx
+# Implement each UI component with Sparkle theme
+
+# 3. Create layout components
+# src/components/layouts/navbar.tsx
+# src/components/layouts/sidebar.tsx
+# src/components/layouts/footer.tsx
