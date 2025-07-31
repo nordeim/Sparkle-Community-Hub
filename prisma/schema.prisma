@@ -1,0 +1,447 @@
+// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  extensions = [pgcrypto, uuid_ossp]
+}
+
+// Enums
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum NotificationType {
+  POST_LIKED
+  POST_COMMENTED
+  COMMENT_LIKED
+  USER_FOLLOWED
+  ACHIEVEMENT_UNLOCKED
+  LEVEL_UP
+  MENTION
+  SYSTEM
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  FIRE
+  SPARKLE
+  MIND_BLOWN
+}
+
+enum ReportReason {
+  SPAM
+  INAPPROPRIATE
+  HARASSMENT
+  MISINFORMATION
+  OTHER
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ESCALATED
+}
+
+// User Models
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  username        String    @unique
+  hashedPassword  String?
+  emailVerified   DateTime?
+  image           String?
+  bio             String?   @db.Text
+  role            UserRole  @default(USER)
+  verified        Boolean   @default(false)
+  banned          Boolean   @default(false)
+  banReason       String?
+  banExpiresAt    DateTime?
+  experience      Int       @default(0)
+  level           Int       @default(1)
+  
+  // Relations
+  accounts        Account[]
+  sessions        Session[]
+  profile         Profile?
+  posts           Post[]
+  comments        Comment[]
+  reactions       Reaction[]
+  followers       Follow[]  @relation("follower")
+  following       Follow[]  @relation("following")
+  notifications   Notification[]
+  achievements    UserAchievement[]
+  xpLogs          XPLog[]
+  reports         Report[]  @relation("reporter")
+  resolvedReports Report[]  @relation("resolver")
+  analyticsEvents AnalyticsEvent[]
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([level])
+  @@map("users")
+}
+
+model Profile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName         String?
+  location            String?
+  website             String?
+  twitterUsername     String?
+  youtubeChannelId    String?
+  youtubeChannelUrl   String?
+  bannerImage         String?
+  themePreference     Json?
+  notificationSettings Json     @default("{}")
+  privacySettings     Json     @default("{}")
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([userId])
+  @@map("profiles")
+}
+
+// NextAuth Models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Content Models
+model Post {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  title           String
+  content         String    @db.Text
+  excerpt         String?
+  coverImage      String?
+  authorId        String
+  author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  published       Boolean   @default(false)
+  featured        Boolean   @default(false)
+  youtubeVideoId  String?
+  views           Int       @default(0)
+  readingTime     Int?
+  metaDescription String?
+  
+  // Relations
+  tags            PostTag[]
+  comments        Comment[]
+  reactions       Reaction[]
+  reports         Report[]
+  
+  // Timestamps
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([slug])
+  @@index([authorId])
+  @@index([published, publishedAt(sort: Desc)])
+  @@index([featured])
+  @@map("posts")
+}
+
+model Tag {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  color       String?
+  postCount   Int       @default(0)
+  
+  posts       PostTag[]
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([name])
+  @@index([slug])
+  @@map("tags")
+}
+
+model PostTag {
+  postId    String
+  tagId     String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime  @default(now())
+  
+  @@id([postId, tagId])
+  @@index([postId])
+  @@index([tagId])
+  @@map("post_tags")
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  content   String    @db.Text
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+  edited    Boolean   @default(false)
+  editedAt  DateTime?
+  deleted   Boolean   @default(false)
+  
+  reactions Reaction[]
+  reports   Report[]
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+model Reaction {
+  id        String       @id @default(cuid())
+  type      ReactionType
+  postId    String?
+  post      Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId String?
+  comment   Comment?     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime     @default(now())
+  
+  @@unique([postId, userId, type])
+  @@unique([commentId, userId, type])
+  @@index([postId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("reactions")
+}
+
+// Social Models
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  type       NotificationType
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actorId    String?
+  entityId   String?
+  entityType String?
+  message    String
+  data       Json?
+  read       Boolean          @default(false)
+  
+  createdAt  DateTime         @default(now())
+  
+  @@index([userId, read, createdAt(sort: Desc)])
+  @@index([actorId])
+  @@map("notifications")
+}
+
+// Gamification Models
+model Achievement {
+  id          String            @id @default(cuid())
+  code        String            @unique
+  name        String
+  description String?
+  icon        String?
+  xpReward    Int               @default(0)
+  rarity      String?
+  category    String?
+  criteria    Json?
+  
+  users       UserAchievement[]
+  
+  createdAt   DateTime          @default(now())
+  
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now())
+  progress      Json?
+  
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@map("user_achievements")
+}
+
+model XPLog {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount   Int
+  reason   String?
+  metadata Json?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("xp_logs")
+}
+
+// Moderation Models
+model Report {
+  id             String           @id @default(cuid())
+  reporterId     String
+  reporter       User             @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reason         ReportReason
+  description    String?          @db.Text
+  status         ModerationStatus @default(PENDING)
+  resolvedBy     String?
+  resolver       User?            @relation("resolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  resolvedAt     DateTime?
+  resolutionNote String?          @db.Text
+  
+  // Polymorphic relation
+  entityType     String
+  entityId       String
+  
+  // Optional relations for type safety
+  post           Post?            @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  comment        Comment?         @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  @@index([status])
+  @@index([entityType, entityId])
+  @@map("reports")
+}
+
+// Settings Models
+model SiteSetting {
+  key         String   @id
+  value       Json
+  description String?
+  category    String?
+  updatedBy   String?
+  updatedAt   DateTime @default(now())
+  
+  @@map("site_settings")
+}
+
+model FeatureFlag {
+  id                String   @id @default(cuid())
+  flag              String   @unique
+  enabled           Boolean  @default(false)
+  rolloutPercentage Int      @default(0)
+  conditions        Json?
+  description       String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("feature_flags")
+}
+
+// Analytics Models
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  eventName  String
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionId  String?
+  properties Json?
+  timestamp  DateTime @default(now())
+  
+  @@index([eventName, timestamp(sort: Desc)])
+  @@index([userId])
+  @@index([sessionId])
+  @@map("analytics_events")
+}
+
+model SearchIndexQueue {
+  id          String    @id @default(cuid())
+  entityType  String
+  entityId    String
+  action      String
+  processed   Boolean   @default(false)
+  error       String?   @db.Text
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+  
+  @@index([processed, createdAt])
+  @@map("search_index_queue")
+}
