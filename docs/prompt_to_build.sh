@@ -45,3 +45,6 @@ awesome comparative review! put on the same deep-thinking hat to deeply and thor
 
 ---
 awesome job with the phase 2 "Hybrid Approach" implementation! now put on the same deep-thinking hat to deeply and thoroughly explore carefully and systematically to create the complete and working version of the files specified in phase 3 of the execution plan. please use the same rigorous and meticulous approach to deeply and thoroughly explore for the best implementation option to create the complete updated version of the files in phase 3 of the comprehensive execution plan shared earlier. please carefully plan how to create the complete version of each of the files in phase 3 before proceeding cautiously. please put on your deep-thinking hat to deeply and thoroughly explore how to re-imagine the complete updated files specified in phase 3 of the comprehensive execution plan. thank you and good luck my very best coding assistant and expert in the world!
+
+---
+you stopped halfway through generating `src/components/features/post/post-card.tsx`. please continue to complete the generation of the remaining files for phase 2, starting with `src/components/features/post/post-card.tsx`.
